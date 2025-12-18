@@ -756,3 +756,87 @@ hr {
     margin-top: 90px !important; }
   .game-message .lower {
     margin-top: 30px !important; } }
+
+    /* --- AŞK FOTOĞRAFLARI AYARI --- */
+
+/* Sayıları gizle, fotoğrafı göster */
+.tile .tile-inner {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    color: transparent !important; /* Sayıları görünmez yap */
+    font-size: 0 !important;
+}
+
+/* 2 Sayısı (İlk Fotoğraf) */
+.tile-2 .tile-inner {
+    background-image: url('img/2.png') !important;
+}
+
+/* 4 Sayısı */
+.tile-4 .tile-inner {
+    background-image: url('img/4.png') !important;
+}
+
+/* --- SİZE ÖZEL RENK AYARLARI --- */
+
+body {
+    background: #fce4ec !important; /* Tatlı, açık bir pembe */
+    color: #880e4f !important;      /* Yazı rengi koyu pembe olsun ki okunsun */
+}
+
+/* Oyun kutusunun arkasındaki gri rengi de pembeye uyduralım */
+.game-container {
+    background: #f8bbd0 !important; /* Oyun alanının zemini */
+}
+
+/* O küçük kutucukların boş halleri */
+.grid-container {
+    background: #f8bbd0 !important;
+}
+
+.grid-cell {
+    background: rgba(255, 255, 255, 0.35) !important; /* Yarı saydam beyaz */
+}
+
+/* --- SKOR VE BUTON RENKLERİ --- */
+
+/* Puan ve Rekor Kutuları */
+.score-container, .best-container {
+    background: #ec407a !important; /* Canlı, koyu bir pembe */
+    color: white !important;        /* İçindeki rakamlar beyaz */
+}
+
+/* Kutuların içindeki "Score" ve "Best" başlık yazıları */
+.score-container:after, .best-container:after {
+    color: #fce4ec !important;      /* Başlıklar açık pembe olsun */
+}
+
+/* "Tekrar Başla" (New Game) Butonu */
+.game-intro .restart-button {
+    background: #d81b60 !important; /* Buton biraz daha koyu pembe olsun */
+    border-radius: 10px !important; /* Köşeleri biraz daha yuvarlatalım */
+}
+
+/* Oyun bittiğinde çıkan "Game Over" ekranı ve butonu */
+.game-message {
+    background: rgba(252, 228, 236, 0.9) !important; /* Arka planı tül gibi açık pembe */
+    color: #880e4f !important;      /* "Game Over" yazısı koyu pembe */
+}
+
+.game-message .restart-button {
+    background: #d81b60 !important; /* Bitiş ekranındaki buton da pembe */
+}
+/* --- YENİ OYUN BUTONU (KESİN ÇÖZÜM) --- */
+
+.restart-button {
+    background: #d81b60 !important;  /* Koyu Pembe */
+    color: white !important;         /* Yazısı Beyaz */
+    border-radius: 5px !important;   /* Kenarları Yuvarlak */
+    display: block !important;       /* Görünür olduğundan emin olalım */
+}
+
+/* Üzerine gelince rengi hafif değişsin (Efekt) */
+.restart-button:hover {
+    background: #ad1457 !important; /* Daha da koyu pembe */
+}
