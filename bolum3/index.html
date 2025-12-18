@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Sonsuz Aşk Yolculuğu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        body { margin: 0; overflow: hidden; background: #ffe4ec; font-family: 'Segoe UI', sans-serif; }
+        
+        #score-board {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 10;
+            text-shadow: 0 0 10px #ff0055;
+        }
+
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            z-index: 20;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid #ff0055;
+        }
+
+        h1 { color: #ff0055; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 5px; }
+        button {
+            background: #ff0055;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 50px;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.1); background: #d60045; }
+        
+        /* Mobil Kontroller */
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 50px;
+            box-sizing: border-box;
+            pointer-events: none; /* Tıklamayı engelleme, altındaki canvas çalışsın */
+        }
+        .btn-mobile {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            border: 2px solid white;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            color: white;
+            display: none; /* Masaüstünde gizli */
+        }
+        .btn-mobile#jumpBtn {
+            width: 100px;
+            height: 100px;
+            font-size: 36px;
+        }
+        
+        @media (max-width: 768px) {
+            .btn-mobile { display: flex; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="score-board">MESAFE: 0m  COIN: 0</div>
+
+    <div id="game-over">
+        <h1>ÇARPTIN!</h1>
+        <p>Ama aşkımız engellerden daha güçlü...</p>
+        <br>
+        <button onclick="location.reload()">TEKRAR DENE ❤️</button>
+        <br><br>
+        <a href="../index.html" style="color:#aaa; text-decoration:none;">Ana Menüye Dön</a>
+    </div>
+
+    <div class="controls">
+        <div class="btn-mobile" id="leftBtn">⬅️</div>
+        <div class="btn-mobile" id="jumpBtn">⬆️</div>
+        <div class="btn-mobile" id="rightBtn">➡️</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <script>
+        // --- OYUN AYARLARI ---
+        let scene, camera, renderer;
+        let player;
+        let obstacles = [];
+        let particles = [];
+        let score = 0;
+        let gameActive = true;
+        let speed = 0.5;
+        let lane = 0; // -1: Sol, 0: Orta, 1: Sağ
+        const laneWidth = 3; 
+
+        // Animation / model helpers
+        let clock = new THREE.Clock();
+        let mixer = null;
+        let runnerMesh = null;
+        let characterGroup = null;
+        // Model dimensions (filled when model loads)
+        let playerModelHeight = 1.0;
+        let playerModelMinY = 0.0;
+
+        // Zıplama değişkenleri
+        let isJumping = false;
+        let velY = 0;
+        const gravity = -0.045; /* Hafif azaltılmış yerçekimi, daha yüksek zıplama */
+        const jumpStrength = 0.57; /* %40 azaltıldı: daha kontrollü zıplama */
+        const groundY = 0.5;
+        const jumpSafeHeight = 1.35; /* Bu yükseklik üstünden güvenle geçebileceğiz */
+
+        // Coin'ler
+        let coins = [];
+        let coinCount = 0;
+
+        // Başlat
+        init();
+        animate();
+
+        function init() {
+            // 1. Sahne Kurulumu
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xffe4ec); // Açık pembe
+            scene.fog = new THREE.Fog(0xffe4ec, 10, 200); // Pembe sis (uzun derinlik) 
+
+            // 2. Kamera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 3, 6);
+            camera.lookAt(0, 0, -5);
+
+            // 3. Renderer (Çizici)
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            // Başlangıç HUD güncellemesi
+            updateHUD && updateHUD();
+
+            // 4. Işıklar
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(5, 10, 7);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            // 5. Zemin (Sonsuz gibi görünen yol)
+            const floorGeometry = new THREE.PlaneGeometry(100, 1000);
+            const floorMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xffd7e6, 
+                side: THREE.DoubleSide 
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.z = -200;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Grid (Çizgiler - Retro hava katar)
+            const gridHelper = new THREE.GridHelper(100, 50, 0xff0055, 0x444444);
+            gridHelper.position.y = 0.01;
+            gridHelper.position.z = -200;
+            scene.add(gridHelper);
+
+            // 6. OYUNCU (3D model veya sprite fallback)
+            characterGroup = new THREE.Group();
+            characterGroup.position.y = groundY;
+            scene.add(characterGroup);
+            player = characterGroup; // uyumluluk için player, grubu işaret eder
+
+            // Try loading a GLTF model at assets/player.glb; if it fails, create a sprite fallback
+            if (typeof THREE.GLTFLoader !== 'undefined') {
+                const gltfLoader = new THREE.GLTFLoader();
+                gltfLoader.load('assets/player.glb', (gltf) => {
+                    const model = gltf.scene;
+                    model.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+
+                    // Try to normalize model height so gameplay stays consistent
+                    const box = new THREE.Box3().setFromObject(model);
+                    const size = new THREE.Vector3();
+                    box.getSize(size);
+                    const modelHeight = size.y || 1.0;
+                    const desiredHeight = 1.0; // target in-game height (units)
+                    const scaleFactor = modelHeight > 0 ? (desiredHeight / modelHeight) : 1;
+                    model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+                    // Recompute bounding box after scaling
+                    const box2 = new THREE.Box3().setFromObject(model);
+                    const min = box2.min.clone();
+                    const size2 = new THREE.Vector3();
+                    box2.getSize(size2);
+
+                    // Shift model up so its bottom sits at group's origin (ground)
+                    model.position.y = -min.y;
+
+                    // store model dims for collision math
+                    playerModelHeight = size2.y;
+                    playerModelMinY = 0; // after shifting bottom to 0
+
+                    model.position.x = 0;
+                    model.position.z = 0;
+
+                    characterGroup.add(model);
+
+                    // Play animation if available
+                    if (gltf.animations && gltf.animations.length) {
+                        mixer = new THREE.AnimationMixer(model);
+                        const clip = THREE.AnimationClip.findByName(gltf.animations, 'Run') || gltf.animations[0];
+                        const action = mixer.clipAction(clip);
+                        action.play();
+                        action.setLoop(THREE.LoopRepeat);
+                    }
+                }, undefined, (err) => {
+                    // failed to load model -> fallback
+                    createSpriteRunner(characterGroup);
+                });
+            } else {
+                createSpriteRunner(characterGroup);
+            }
+
+            // Kontroller
+            document.addEventListener('keydown', handleInput);
+            document.getElementById('leftBtn').addEventListener('touchstart', () => movePlayer(-1));
+            document.getElementById('rightBtn').addEventListener('touchstart', () => movePlayer(1));
+            document.getElementById('jumpBtn').addEventListener('touchstart', (e) => { e.preventDefault(); handleJump(); });
+            document.getElementById('jumpBtn').addEventListener('mousedown', handleJump);
+
+            // Ekrana tıklandığında sol/sağ (Masaüstü için alternatif)
+            window.addEventListener('mousedown', (e) => {
+                if(e.clientX < window.innerWidth / 2) movePlayer(-1);
+                else movePlayer(1);
+            });
+        }
+
+        function handleInput(e) {
+            if (e.key === 'ArrowLeft' || e.key === 'a') movePlayer(-1);
+            if (e.key === 'ArrowRight' || e.key === 'd') movePlayer(1);
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') handleJump();
+        }
+
+        function movePlayer(direction) {
+            if (!gameActive) return;
+            lane += direction;
+            // Sınırları koru
+            if (lane < -1) lane = -1;
+            if (lane > 1) lane = 1;
+        }
+
+        function handleJump() {
+            if (!gameActive) return;
+            if (!isJumping) {
+                isJumping = true;
+                velY = jumpStrength;
+            }
+        }
+
+        function createObstacle() {
+            // Rastgele bir engel oluştur (daha kısa, zıplama için uygun)
+            const geometry = new THREE.BoxGeometry(1.5, 1.2, 1); // Düşük engel
+            const loader = new THREE.TextureLoader();
+            const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' rx='30' ry='30' fill='%23ff69b4'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-size='96' fill='white'>🌸</text></svg>`;
+            const url = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+            const material = new THREE.MeshPhongMaterial({ map: loader.load(url), transparent: true });
+            const obstacle = new THREE.Mesh(geometry, material);
+            
+            // Rastgele şerit seç (-1, 0, 1)
+            const randomLane = Math.floor(Math.random() * 3) - 1; 
+            
+            obstacle.position.x = randomLane * laneWidth;
+            obstacle.position.y = 0.6; // merkez y (yükseklik 1.2 olduğundan taban yaklaşık 0)
+            obstacle.position.z = -50; // Uzaktan doğsun
+            obstacle.castShadow = true;
+            
+            scene.add(obstacle);
+            obstacles.push(obstacle);
+        }
+
+        function createCoin() {
+            const geometry = new THREE.SphereGeometry(0.28, 16, 16);
+            const material = new THREE.MeshPhongMaterial({ color: 0xffd700, emissive: 0x553300 });
+            const coin = new THREE.Mesh(geometry, material);
+
+            const randomLane = Math.floor(Math.random() * 3) - 1;
+            coin.position.x = randomLane * laneWidth;
+            coin.position.y = 1.0; // biraz daha alçakta, ulaşılması daha kolay
+            coin.position.z = -50;
+            coin.castShadow = true;
+
+            // Kullanıcı kendi resmini koyarsa assets/coin.png yüklenebilir
+            const loader = new THREE.TextureLoader();
+            loader.load('assets/coin.png', (tex) => {
+                material.map = tex;
+                material.needsUpdate = true;
+            }, undefined, () => { /* yoksa renkli materyal kalır */ });
+
+            scene.add(coin);
+            coins.push(coin);
+        }
+
+        function createSpriteRunner(parent) {
+            // Placeholder runner as an SVG texture (you can replace with assets/runner.png)
+            const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' rx='30' ry='30' fill='%23ff2e63'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-size='96' fill='white'>🏃‍♀️</text></svg>`;
+            const url = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+            const loader = new THREE.TextureLoader();
+            loader.load(url, (tex) => {
+                const material = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+                const geo = new THREE.PlaneGeometry(0.9, 1.1);
+                runnerMesh = new THREE.Mesh(geo, material);
+                // Plane is centered; raise it so its bottom sits at group's origin (ground)
+                runnerMesh.position.y = 0.5;
+                runnerMesh.castShadow = true;
+                parent.add(runnerMesh);
+            }, undefined, () => {
+                // fallback: simple colored box
+                const mat = new THREE.MeshPhongMaterial({ color: 0xff2e63 });
+                const box = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1, 0.4), mat);
+                box.position.y = 0.5;
+                parent.add(box);
+                runnerMesh = box;
+            });
+        }
+
+        function createParticles() {
+            // Hız hissi veren yıldızlar/tozlar
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            for(let i=0; i<5; i++) {
+                const x = (Math.random() - 0.5) * 40;
+                const y = (Math.random()) * 10;
+                const z = -60;
+                vertices.push(x, y, z);
+            }
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.2 });
+            const stars = new THREE.Points(geometry, material);
+            scene.add(stars);
+            particles.push(stars);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!gameActive) return;
+
+            // Oyuncu Hareketi (Yumuşak Geçiş - Lerp) — hızlandırıldı
+            player.position.x += (lane * laneWidth - player.position.x) * 0.25;
+
+            // Zıplama fiziği
+            velY += gravity;
+            player.position.y += velY;
+            if (player.position.y <= groundY) {
+                player.position.y = groundY;
+                velY = 0;
+                isJumping = false;
+            }
+
+            // Animasyon: ilerleyen mixer (3D model) ve sprite koşu animasyonu
+            const delta = clock.getDelta();
+            if (mixer) mixer.update(delta);
+
+            if (!isJumping) {
+                // ground run animation
+                if (runnerMesh) {
+                    // Sprite: hafif dönüş ve zıplama bounce efekti
+                    runnerMesh.rotation.y = Math.sin(Date.now() * 0.01) * 0.16;
+                    const bounce = 1 + Math.sin(Date.now() * 0.01) * 0.02;
+                    runnerMesh.scale.set(bounce, bounce, bounce);
+                } else {
+                    // 3D model: dönmesini istemiyoruz, sadece çok hafif bob uygula
+                    if (characterGroup) {
+                        const bob = 1 + Math.sin(Date.now() * 0.005) * 0.01;
+                        characterGroup.scale.set(bob, bob, bob);
+                    }
+                }
+            } else {
+                if (runnerMesh) runnerMesh.scale.set(1, 0.86, 1);
+                else if (characterGroup) characterGroup.scale.set(1, 0.95, 1);
+            }
+
+            // Engel Yönetimi
+            if (Math.random() < 0.03) createObstacle(); // Engel doğma sıklığı
+            if (Math.random() < 0.015) createCoin(); // Coin doğurma (daha nadir)
+            if (Math.random() < 0.2) createParticles(); // Yıldız efekti
+
+            // Engelleri Hareket Ettir
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obj = obstacles[i];
+                obj.position.z += speed;
+
+                // Çarpışma Kontrolü (Bounding-box tabanlı)
+                // Eğer Z pozisyonu oyuncuya çok yakınsa VE X şeridi aynıysa
+                if (obj.position.z > -1 && obj.position.z < 1) {
+                    if (Math.abs(obj.position.x - player.position.x) < 1) {
+                        // Hesapla: engelin üst noktası ve oyuncunun tabanı
+                        const obBox = new THREE.Box3().setFromObject(obj);
+                        const obstacleTopY = obBox.max.y;
+                        const playerBottomY = characterGroup.position.y + playerModelMinY;
+
+                        // Eğer oyuncunun tabanı engelin üstünden daha düşükse çarpışma
+                        if (playerBottomY <= obstacleTopY - 0.05) {
+                            gameOver();
+                        } else {
+                            // Engel üzerinden atlandı: küçük bonus (engeli silmeyiz)
+                            score += 2;
+                            updateHUD();
+                        }
+                    }
+                }
+
+                // Ekrandan çıkınca sil (Performans için)
+                if (obj.position.z > 5) {
+                    scene.remove(obj);
+                    obstacles.splice(i, 1);
+                    score += 10; // Puan artır
+                    updateHUD();
+                    
+                    // Oyun gittikçe hızlansın
+                    speed += 0.0005;
+                }
+            }
+
+            // Coinleri hareket ettir ve toplama kontrolü
+            for (let i = coins.length - 1; i >= 0; i--) {
+                let c = coins[i];
+                c.position.z += speed;
+
+                // Toplama kontrolü: yakınlık ve oyuncunun yüksekliği
+                if (c.position.z > -1 && c.position.z < 1 && Math.abs(c.position.x - player.position.x) < 1) {
+                    if (Math.abs(player.position.y - c.position.y) < 0.9) {
+                        // Toplandı
+                        scene.remove(c);
+                        coins.splice(i, 1);
+                        coinCount += 1;
+                        updateHUD();
+                        continue;
+                    }
+                }
+
+                // Ekrandan çıkınca sil
+                if (c.position.z > 5) {
+                    scene.remove(c);
+                    coins.splice(i, 1);
+                }
+            }
+
+            // Parçacık Hareketi
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.position.z += speed * 2; // Yıldızlar daha hızlı aksın
+                if (p.position.z > 5) {
+                    scene.remove(p);
+                    particles.splice(i, 1);
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            document.getElementById('game-over').style.display = 'block';
+        }
+
+        // Pencere boyutu değişirse
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        function updateHUD() {
+            document.getElementById('score-board').innerText = "MESAFE: " + Math.floor(score) + "m  COIN: " + coinCount;
+        }
+
+    </script>
+</body>
+</html>
