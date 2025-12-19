@@ -148,8 +148,9 @@
             scene.fog = new THREE.Fog(0xffe4ec, 10, 200); // Pembe sis (uzun derinlik) 
 
             // 2. Kamera
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 3, 6);
+            // Widen FOV and move camera back so side lanes stay visible on most screens
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 3.5, 8.5);
             camera.lookAt(0, 0, -5);
 
             // 3. Renderer (Çizici)
@@ -199,7 +200,19 @@
                 const gltfLoader = new THREE.GLTFLoader();
                 gltfLoader.load('assets/player.glb', (gltf) => {
                     const model = gltf.scene;
-                    model.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+                    model.traverse((n) => {
+                        if (n.isMesh) {
+                            n.castShadow = true;
+                            n.receiveShadow = true;
+                            if (n.material) {
+                                n.material.side = THREE.DoubleSide;
+                                if (n.material.transparent) {
+                                    n.material.alphaTest = 0.01;
+                                    n.material.depthWrite = false;
+                                }
+                            }
+                        }
+                    });
 
                     // Try to normalize model height so gameplay stays consistent
                     const box = new THREE.Box3().setFromObject(model);
@@ -246,10 +259,60 @@
 
             // Kontroller
             document.addEventListener('keydown', handleInput);
-            document.getElementById('leftBtn').addEventListener('touchstart', () => movePlayer(-1));
-            document.getElementById('rightBtn').addEventListener('touchstart', () => movePlayer(1));
-            document.getElementById('jumpBtn').addEventListener('touchstart', (e) => { e.preventDefault(); handleJump(); });
-            document.getElementById('jumpBtn').addEventListener('mousedown', handleJump);
+
+            const leftBtn = document.getElementById('leftBtn');
+            const rightBtn = document.getElementById('rightBtn');
+            const jumpBtn = document.getElementById('jumpBtn');
+
+            const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+            if (isTouchDevice) {
+                // Mobilde on-screen tuşları gizle ve parmak kaydırma ile kontrol et
+                const controlsEl = document.querySelector('.controls');
+                if (controlsEl) controlsEl.style.display = 'none';
+
+                let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+                const minSwipeX = 40, minSwipeY = 30, maxSwipeTime = 700;
+
+                function onTouchStart(e) {
+                    if (!e.touches || e.touches.length !== 1) return;
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                    touchStartTime = Date.now();
+                }
+
+                function onTouchEnd(e) {
+                    if (!e.changedTouches || e.changedTouches.length !== 1) return;
+                    const t = e.changedTouches[0];
+                    const dx = t.clientX - touchStartX;
+                    const dy = t.clientY - touchStartY;
+                    const dt = Date.now() - touchStartTime;
+
+                    // Hızlı kaydırma algılama
+                    if (dt < maxSwipeTime) {
+                        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > minSwipeX) {
+                            // yatay kaydırma
+                            if (dx > 0) movePlayer(1);
+                            else movePlayer(-1);
+                        } else if (Math.abs(dy) > minSwipeY && dy < 0) {
+                            // yukarı kaydırma -> zıpla
+                            handleJump();
+                        }
+                    }
+
+                    e.preventDefault();
+                }
+
+                // Dinleyicileri renderer'ın canvas'ına ekle (diğer elementlerle çakışmayacak şekilde)
+                renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: true });
+                renderer.domElement.addEventListener('touchend', onTouchEnd, { passive: false });
+
+            } else {
+                // Masaüstü: fare için butonlar hâlâ kullanılabilir
+                if (leftBtn) leftBtn.addEventListener('click', () => movePlayer(-1));
+                if (rightBtn) rightBtn.addEventListener('click', () => movePlayer(1));
+                if (jumpBtn) jumpBtn.addEventListener('mousedown', handleJump);
+            }
 
             // Ekrana tıklandığında sol/sağ (Masaüstü için alternatif)
             window.addEventListener('mousedown', (e) => {
@@ -329,7 +392,7 @@
             const url = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
             const loader = new THREE.TextureLoader();
             loader.load(url, (tex) => {
-                const material = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+                const material = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, alphaTest: 0.01, depthWrite: false });
                 const geo = new THREE.PlaneGeometry(0.9, 1.1);
                 runnerMesh = new THREE.Mesh(geo, material);
                 // Plane is centered; raise it so its bottom sits at group's origin (ground)
@@ -338,7 +401,7 @@
                 parent.add(runnerMesh);
             }, undefined, () => {
                 // fallback: simple colored box
-                const mat = new THREE.MeshPhongMaterial({ color: 0xff2e63 });
+                const mat = new THREE.MeshPhongMaterial({ color: 0xff2e63, side: THREE.DoubleSide });
                 const box = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1, 0.4), mat);
                 box.position.y = 0.5;
                 parent.add(box);
@@ -370,6 +433,10 @@
 
             // Oyuncu Hareketi (Yumuşak Geçiş - Lerp) — hızlandırıldı
             player.position.x += (lane * laneWidth - player.position.x) * 0.25;
+
+            // Kamera sabit kalacak — hareket etmeyecek
+            camera.position.x = 0;
+            camera.lookAt(0, 0, -5);
 
             // Zıplama fiziği
             velY += gravity;
