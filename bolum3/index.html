@@ -1,570 +1,751 @@
-<!DOCTYPE html>
-<html lang="tr">
+<!DOCTYPE html> 
+
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Sonsuz Aşk Yolculuğu</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <style>
-        body { margin: 0; overflow: hidden; background: #ffe4ec; font-family: 'Segoe UI', sans-serif; }
-        
-        #score-board {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            z-index: 10;
-            text-shadow: 0 0 10px #ff0055;
-        }
+  <title>Javascript Racer - v4 (final)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link href="common.css" rel="stylesheet" type="text/css" />
+  <style>
+    #controls, #instructions { display: none; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100vw; height: 100vh; overflow: hidden; background: #000; position: fixed; top: 0; left: 0; }
+    #racer { width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; }
+    #canvas { width: 100vw; height: 100vh; display: block; position: fixed; top: 0; left: 0; }
+    #hud { position: fixed; top: 10px; left: 10px; z-index: 100; color: white; font-family: Arial, sans-serif; font-size: 14px; }
+    .hud { display: block; margin: 5px 0; background: rgba(0, 0, 0, 0.5); padding: 5px 10px; border-radius: 3px; }
+  </style>
+</head> 
 
-        #game-over {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            color: white;
-            z-index: 20;
-            background: rgba(0, 0, 0, 0.85);
-            padding: 40px;
-            border-radius: 20px;
-            border: 2px solid #ff0055;
-        }
+<body> 
 
-        h1 { color: #ff0055; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 5px; }
-        button {
-            background: #ff0055;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 18px;
-            cursor: pointer;
-            border-radius: 50px;
-            transition: transform 0.2s;
-        }
-        button:hover { transform: scale(1.1); background: #d60045; }
-        
-        /* Mobil Kontroller */
-        .controls {
-            position: absolute;
-            bottom: 20px;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 50px;
-            box-sizing: border-box;
-            pointer-events: none; /* Tıklamayı engelleme, altındaki canvas çalışsın */
-        }
-        .btn-mobile {
-            width: 80px;
-            height: 80px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            border: 2px solid white;
-            pointer-events: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 30px;
-            color: white;
-            display: none; /* Masaüstünde gizli */
-        }
-        .btn-mobile#jumpBtn {
-            width: 100px;
-            height: 100px;
-            font-size: 36px;
-        }
-        
-        @media (max-width: 768px) {
-            .btn-mobile { display: flex; }
-        }
-    </style>
-</head>
-<body>
+  <table id="controls">
+    <tr>
+      <td colspan="2">
+        <a href='v1.straight.html'>straight</a> |
+        <a href='v2.curves.html'>curves</a>     |
+        <a href='v3.hills.html'>hills</a>       |
+        <a href='v4.final.html'>final</a>
+      </td>
+    </tr>
+    <tr><td id="fps" colspan="2" align="right"></td></tr>
+    <tr>
+      <th><label for="resolution">Resolution :</label></th>
+      <td>
+        <select id="resolution" style="width:100%">
+          <option value='fine'>Fine (1280x960)</option>
+          <option selected value='high'>High (1024x768)</option>
+          <option value='medium'>Medium (640x480)</option>
+          <option value='low'>Low (480x360)</option>
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <th><label for="lanes">Lanes :</label></th>
+      <td>
+        <select id="lanes">
+          <option>1</option>
+          <option>2</option>
+          <option selected>3</option>
+          <option>4</option>
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <th><label for="roadWidth">Road Width (<span id="currentRoadWidth"></span>) :</label></th>
+      <td><input id="roadWidth" type='range' min='500' max='3000' title="integer (500-3000)"></td>
+    </tr>
+    <tr>
+      <th><label for="cameraHeight">CameraHeight (<span id="currentCameraHeight"></span>) :</label></th>
+      <td><input id="cameraHeight" type='range' min='500' max='5000' title="integer (500-5000)"></td>
+    </tr>
+    <tr>
+      <th><label for="drawDistance">Draw Distance (<span id="currentDrawDistance"></span>) :</label></th>
+      <td><input id="drawDistance" type='range' min='100' max='500' title="integer (100-500)"></td>
+    </tr>
+    <tr>
+      <th><label for="fieldOfView">Field of View (<span id="currentFieldOfView"></span>) :</label></th>
+      <td><input id="fieldOfView" type='range' min='80' max='140' title="integer (80-140)"></td>
+    </tr>
+    <tr>
+      <th><label for="fogDensity">Fog Density (<span id="currentFogDensity"></span>) :</label></th>
+      <td><input id="fogDensity" type='range' min='0' max='50' title="integer (0-50)"></td>
+    </tr>
+  </table>
 
-    <div id="score-board">MESAFE: 0m  COIN: 0</div>
+  <div id='instructions'>
+    <p>Use the <b>arrow keys</b> to drive the car.</p>
+  </div>
 
-    <div id="game-over">
-        <h1>ÇARPTIN!</h1>
-        <p>Ama aşkımız engellerden daha güçlü...</p>
-        <br>
-        <button onclick="location.reload()">TEKRAR DENE ❤️</button>
-        <br><br>
-        <a href="../index.html" style="color:#aaa; text-decoration:none;">Ana Menüye Dön</a>
+  <div id="racer">
+    <div id="hud">
+      <span id="speed"            class="hud"><span id="speed_value" class="value">0</span> mph</span>
+      <span id="current_lap_time" class="hud">Time: <span id="current_lap_time_value" class="value">0.0</span></span> 
+      <span id="last_lap_time"    class="hud">Last Lap: <span id="last_lap_time_value" class="value">0.0</span></span>
+      <span id="fast_lap_time"    class="hud">Fastest Lap: <span id="fast_lap_time_value" class="value">0.0</span></span>
     </div>
-
-    <div class="controls">
-        <div class="btn-mobile" id="leftBtn">⬅️</div>
-        <div class="btn-mobile" id="jumpBtn">⬆️</div>
-        <div class="btn-mobile" id="rightBtn">➡️</div>
+    <canvas id="canvas">
+      Sorry, this example cannot be run because your browser does not support the &lt;canvas&gt; element
+    </canvas>
+    
+    <!-- Mobile Controls Left Side (Steering) -->
+    <div id="leftControls" style="position: fixed; bottom: 20px; left: 20px; display: flex; gap: 10px; z-index: 50;">
+      <button id="btnLeft" style="width: 60px; height: 60px; font-size: 24px; background: rgba(255,255,255,0.3); border: 2px solid white; border-radius: 10px; color: white; cursor: pointer;">◀</button>
+      <button id="btnRight" style="width: 60px; height: 60px; font-size: 24px; background: rgba(255,255,255,0.3); border: 2px solid white; border-radius: 10px; color: white; cursor: pointer;">▶</button>
     </div>
+    
+    <!-- Mobile Controls Right Side (Acceleration) -->
+    <div id="rightControls" style="position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 50;">
+      <button id="btnUp" style="width: 60px; height: 60px; font-size: 24px; background: rgba(255,255,255,0.3); border: 2px solid white; border-radius: 10px; color: white; cursor: pointer;">▲</button>
+      <button id="btnDown" style="width: 60px; height: 60px; font-size: 24px; background: rgba(255,255,255,0.3); border: 2px solid white; border-radius: 10px; color: white; cursor: pointer;">▼</button>
+    </div>
+    
+    Loading...
+  </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <audio id='music'>
+    <source src="music/racer.ogg">
+    <source src="music/racer.mp3">
+  </audio>
+  <span id="mute"></span>
 
-    <script>
-        // --- OYUN AYARLARI ---
-        let scene, camera, renderer;
-        let player;
-        let obstacles = [];
-        let particles = [];
-        let score = 0;
-        let gameActive = true;
-        let speed = 0.5;
-        let lane = 0; // -1: Sol, 0: Orta, 1: Sağ
-        const laneWidth = 3; 
+  <script src="stats.js"></script>
+  <script src="common.js"></script>
+  <script>
 
-        // Animation / model helpers
-        let clock = new THREE.Clock();
-        let mixer = null;
-        let runnerMesh = null;
-        let characterGroup = null;
-        // Model dimensions (filled when model loads)
-        let playerModelHeight = 1.0;
-        let playerModelMinY = 0.0;
+    var fps            = 60;                      // how many 'update' frames per second
+    var step           = 1/fps;                   // how long is each frame (in seconds)
+    var width          = 640;                     // logical canvas width (medium resolution)
+    var height         = 480;                     // logical canvas height (medium resolution)
+    var centrifugal    = 0.3;                     // centrifugal force multiplier when going around curves
+    var offRoadDecel   = 0.99;                    // speed multiplier when off road (e.g. you lose 2% speed each update frame)
+    var skySpeed       = 0.001;                   // background sky layer scroll speed when going around curve (or up hill)
+    var hillSpeed      = 0.002;                   // background hill layer scroll speed when going around curve (or up hill)
+    var treeSpeed      = 0.003;                   // background tree layer scroll speed when going around curve (or up hill)
+    var skyOffset      = 0;                       // current sky scroll offset
+    var hillOffset     = 0;                       // current hill scroll offset
+    var treeOffset     = 0;                       // current tree scroll offset
+    var segments       = [];                      // array of road segments
+    var cars           = [];                      // array of cars on the road
+    var stats          = Game.stats('fps');       // mr.doobs FPS counter
+    var canvas         = Dom.get('canvas');       // our canvas...
+    var ctx            = canvas.getContext('2d'); // ...and its drawing context
+    var background     = null;                    // our background image (loaded below)
+    var sprites        = null;                    // our spritesheet (loaded below)
+    var resolution     = null;                    // scaling factor to provide resolution independence (computed)
+    var roadWidth      = 1000;                    // actually half the roads width, easier math if the road spans from -roadWidth to +roadWidth
+    var segmentLength  = 200;                     // length of a single segment
+    var rumbleLength   = 3;                       // number of segments per red/white rumble strip
+    var trackLength    = null;                    // z length of entire track (computed)
+    var lanes          = 3;                       // number of lanes
+    var fieldOfView    = 120;                     // angle (degrees) for field of view
+    var cameraHeight   = 1000;                    // z height of camera
+    var cameraDepth    = null;                    // z distance camera is from screen (computed)
+    var drawDistance   = 200;                     // number of segments to draw
+    var playerX        = 0;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
+    var playerZ        = null;                    // player relative z distance from camera (computed)
+    var fogDensity     = 0;                       // exponential fog density
+    var position       = 0;                       // current camera Z position (add playerZ to get player's absolute Z position)
+    var speed          = 0;                       // current speed
+    var maxSpeed       = segmentLength/step;      // top speed (ensure we can't move more than 1 segment in a single frame to make collision detection easier)
+    var accel          =  maxSpeed/5;             // acceleration rate - tuned until it 'felt' right
+    var breaking       = -maxSpeed;               // deceleration rate when braking
+    var decel          = -maxSpeed/5;             // 'natural' deceleration rate when neither accelerating, nor braking
+    var offRoadDecel   = -maxSpeed/2;             // off road deceleration is somewhere in between
+    var offRoadLimit   =  maxSpeed/4;             // limit when off road deceleration no longer applies (e.g. you can always go at least this speed even when off road)
+    var totalCars      = 200;                     // total number of cars on the road
+    var currentLapTime = 0;                       // current lap time
+    var lastLapTime    = null;                    // last lap time
 
-        // Zıplama değişkenleri
-        let isJumping = false;
-        let velY = 0;
-        const gravity = -0.045; /* Hafif azaltılmış yerçekimi, daha yüksek zıplama */
-        const jumpStrength = 0.57; /* %40 azaltıldı: daha kontrollü zıplama */
-        const groundY = 0.5;
-        const jumpSafeHeight = 1.35; /* Bu yükseklik üstünden güvenle geçebileceğiz */
+    var keyLeft        = false;
+    var keyRight       = false;
+    var keyFaster      = false;
+    var keySlower      = false;
 
-        // Coin'ler
-        let coins = [];
-        let coinCount = 0;
+    // Mobile button controls
+    function setupMobileControls() {
+      const btnLeft = document.getElementById('btnLeft');
+      const btnRight = document.getElementById('btnRight');
+      const btnUp = document.getElementById('btnUp');
+      const btnDown = document.getElementById('btnDown');
 
-        // Başlat
-        init();
-        animate();
+      // Left button
+      btnLeft.addEventListener('mousedown', () => { keyLeft = true; });
+      btnLeft.addEventListener('mouseup', () => { keyLeft = false; });
+      btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); keyLeft = true; });
+      btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); keyLeft = false; });
 
-        function init() {
-            // 1. Sahne Kurulumu
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xffe4ec); // Açık pembe
-            scene.fog = new THREE.Fog(0xffe4ec, 10, 200); // Pembe sis (uzun derinlik) 
+      // Right button
+      btnRight.addEventListener('mousedown', () => { keyRight = true; });
+      btnRight.addEventListener('mouseup', () => { keyRight = false; });
+      btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); keyRight = true; });
+      btnRight.addEventListener('touchend', (e) => { e.preventDefault(); keyRight = false; });
 
-            // 2. Kamera
-            // Widen FOV and move camera back so side lanes stay visible on most screens
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 3.5, 8.5);
-            camera.lookAt(0, 0, -5);
+      // Up button (accelerate)
+      btnUp.addEventListener('mousedown', () => { keyFaster = true; });
+      btnUp.addEventListener('mouseup', () => { keyFaster = false; });
+      btnUp.addEventListener('touchstart', (e) => { e.preventDefault(); keyFaster = true; });
+      btnUp.addEventListener('touchend', (e) => { e.preventDefault(); keyFaster = false; });
 
-            // 3. Renderer (Çizici)
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            document.body.appendChild(renderer.domElement);
+      // Down button (decelerate)
+      btnDown.addEventListener('mousedown', () => { keySlower = true; });
+      btnDown.addEventListener('mouseup', () => { keySlower = false; });
+      btnDown.addEventListener('touchstart', (e) => { e.preventDefault(); keySlower = true; });
+      btnDown.addEventListener('touchend', (e) => { e.preventDefault(); keySlower = false; });
+    }
 
-            // Başlangıç HUD güncellemesi
-            updateHUD && updateHUD();
+    var hud = {
+      speed:            { value: null, dom: Dom.get('speed_value')            },
+      current_lap_time: { value: null, dom: Dom.get('current_lap_time_value') },
+      last_lap_time:    { value: null, dom: Dom.get('last_lap_time_value')    },
+      fast_lap_time:    { value: null, dom: Dom.get('fast_lap_time_value')    }
+    }
 
-            // 4. Işıklar
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambientLight);
+    //=========================================================================
+    // UPDATE THE GAME WORLD
+    //=========================================================================
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(5, 10, 7);
-            dirLight.castShadow = true;
-            scene.add(dirLight);
+    function update(dt) {
 
-            // 5. Zemin (Sonsuz gibi görünen yol)
-            const floorGeometry = new THREE.PlaneGeometry(100, 1000);
-            const floorMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0xffd7e6, 
-                side: THREE.DoubleSide 
-            });
-            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-            floor.rotation.x = -Math.PI / 2;
-            floor.position.z = -200;
-            floor.receiveShadow = true;
-            scene.add(floor);
+      var n, car, carW, sprite, spriteW;
+      var playerSegment = findSegment(position+playerZ);
+      var playerW       = SPRITES.PLAYER_STRAIGHT.w * SPRITES.SCALE;
+      var speedPercent  = speed/maxSpeed;
+      var dx            = dt * 2 * speedPercent; // at top speed, should be able to cross from left to right (-1 to 1) in 1 second
+      var startPosition = position;
 
-            // Grid (Çizgiler - Retro hava katar)
-            const gridHelper = new THREE.GridHelper(100, 50, 0xff0055, 0x444444);
-            gridHelper.position.y = 0.01;
-            gridHelper.position.z = -200;
-            scene.add(gridHelper);
+      updateCars(dt, playerSegment, playerW);
 
-            // 6. OYUNCU (3D model veya sprite fallback)
-            characterGroup = new THREE.Group();
-            characterGroup.position.y = groundY;
-            scene.add(characterGroup);
-            player = characterGroup; // uyumluluk için player, grubu işaret eder
+      position = Util.increase(position, dt * speed, trackLength);
 
-            // Try loading a GLTF model at assets/player.glb; if it fails, create a sprite fallback
-            if (typeof THREE.GLTFLoader !== 'undefined') {
-                const gltfLoader = new THREE.GLTFLoader();
-                gltfLoader.load('assets/player.glb', (gltf) => {
-                    const model = gltf.scene;
-                    model.traverse((n) => {
-                        if (n.isMesh) {
-                            n.castShadow = true;
-                            n.receiveShadow = true;
-                            if (n.material) {
-                                n.material.side = THREE.DoubleSide;
-                                if (n.material.transparent) {
-                                    n.material.alphaTest = 0.01;
-                                    n.material.depthWrite = false;
-                                }
-                            }
-                        }
-                    });
+      if (keyLeft)
+        playerX = playerX - dx;
+      else if (keyRight)
+        playerX = playerX + dx;
 
-                    // Try to normalize model height so gameplay stays consistent
-                    const box = new THREE.Box3().setFromObject(model);
-                    const size = new THREE.Vector3();
-                    box.getSize(size);
-                    const modelHeight = size.y || 1.0;
-                    const desiredHeight = 1.0; // target in-game height (units)
-                    const scaleFactor = modelHeight > 0 ? (desiredHeight / modelHeight) : 1;
-                    model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+      playerX = playerX - (dx * speedPercent * playerSegment.curve * centrifugal);
 
-                    // Recompute bounding box after scaling
-                    const box2 = new THREE.Box3().setFromObject(model);
-                    const min = box2.min.clone();
-                    const size2 = new THREE.Vector3();
-                    box2.getSize(size2);
+      if (keyFaster)
+        speed = Util.accelerate(speed, accel, dt);
+      else if (keySlower)
+        speed = Util.accelerate(speed, breaking, dt);
+      else
+        speed = Util.accelerate(speed, decel, dt);
 
-                    // Shift model up so its bottom sits at group's origin (ground)
-                    model.position.y = -min.y;
 
-                    // store model dims for collision math
-                    playerModelHeight = size2.y;
-                    playerModelMinY = 0; // after shifting bottom to 0
+      if ((playerX < -1) || (playerX > 1)) {
 
-                    model.position.x = 0;
-                    model.position.z = 0;
+        if (speed > offRoadLimit)
+          speed = Util.accelerate(speed, offRoadDecel, dt);
 
-                    characterGroup.add(model);
+        for(n = 0 ; n < playerSegment.sprites.length ; n++) {
+          sprite  = playerSegment.sprites[n];
+          spriteW = sprite.source.w * SPRITES.SCALE;
+          if (Util.overlap(playerX, playerW, sprite.offset + spriteW/2 * (sprite.offset > 0 ? 1 : -1), spriteW)) {
+            speed = maxSpeed/5;
+            position = Util.increase(playerSegment.p1.world.z, -playerZ, trackLength); // stop in front of sprite (at front of segment)
+            break;
+          }
+        }
+      }
 
-                    // Play animation if available
-                    if (gltf.animations && gltf.animations.length) {
-                        mixer = new THREE.AnimationMixer(model);
-                        const clip = THREE.AnimationClip.findByName(gltf.animations, 'Run') || gltf.animations[0];
-                        const action = mixer.clipAction(clip);
-                        action.play();
-                        action.setLoop(THREE.LoopRepeat);
-                    }
-                }, undefined, (err) => {
-                    // failed to load model -> fallback
-                    createSpriteRunner(characterGroup);
-                });
-            } else {
-                createSpriteRunner(characterGroup);
-            }
+      for(n = 0 ; n < playerSegment.cars.length ; n++) {
+        car  = playerSegment.cars[n];
+        carW = car.sprite.w * SPRITES.SCALE;
+        if (speed > car.speed) {
+          if (Util.overlap(playerX, playerW, car.offset, carW, 0.8)) {
+            speed    = car.speed * (car.speed/speed);
+            position = Util.increase(car.z, -playerZ, trackLength);
+            break;
+          }
+        }
+      }
 
-            // Kontroller
-            document.addEventListener('keydown', handleInput);
+      playerX = Util.limit(playerX, -3, 3);     // dont ever let it go too far out of bounds
+      speed   = Util.limit(speed, 0, maxSpeed); // or exceed maxSpeed
 
-            const leftBtn = document.getElementById('leftBtn');
-            const rightBtn = document.getElementById('rightBtn');
-            const jumpBtn = document.getElementById('jumpBtn');
+      skyOffset  = Util.increase(skyOffset,  skySpeed  * playerSegment.curve * (position-startPosition)/segmentLength, 1);
+      hillOffset = Util.increase(hillOffset, hillSpeed * playerSegment.curve * (position-startPosition)/segmentLength, 1);
+      treeOffset = Util.increase(treeOffset, treeSpeed * playerSegment.curve * (position-startPosition)/segmentLength, 1);
 
-            const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      if (position > playerZ) {
+        if (currentLapTime && (startPosition < playerZ)) {
+          lastLapTime    = currentLapTime;
+          currentLapTime = 0;
+          if (lastLapTime <= Util.toFloat(Dom.storage.fast_lap_time)) {
+            Dom.storage.fast_lap_time = lastLapTime;
+            updateHud('fast_lap_time', formatTime(lastLapTime));
+            Dom.addClassName('fast_lap_time', 'fastest');
+            Dom.addClassName('last_lap_time', 'fastest');
+          }
+          else {
+            Dom.removeClassName('fast_lap_time', 'fastest');
+            Dom.removeClassName('last_lap_time', 'fastest');
+          }
+          updateHud('last_lap_time', formatTime(lastLapTime));
+          Dom.show('last_lap_time');
+        }
+        else {
+          currentLapTime += dt;
+        }
+      }
 
-            if (isTouchDevice) {
-                // Mobilde on-screen tuşları gizle ve parmak kaydırma ile kontrol et
-                const controlsEl = document.querySelector('.controls');
-                if (controlsEl) controlsEl.style.display = 'none';
+      updateHud('speed',            5 * Math.round(speed/500));
+      updateHud('current_lap_time', formatTime(currentLapTime));
+    }
 
-                let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
-                const minSwipeX = 40, minSwipeY = 30, maxSwipeTime = 700;
+    //-------------------------------------------------------------------------
 
-                function onTouchStart(e) {
-                    if (!e.touches || e.touches.length !== 1) return;
-                    touchStartX = e.touches[0].clientX;
-                    touchStartY = e.touches[0].clientY;
-                    touchStartTime = Date.now();
-                }
+    function updateCars(dt, playerSegment, playerW) {
+      var n, car, oldSegment, newSegment;
+      for(n = 0 ; n < cars.length ; n++) {
+        car         = cars[n];
+        oldSegment  = findSegment(car.z);
+        car.offset  = car.offset + updateCarOffset(car, oldSegment, playerSegment, playerW);
+        car.z       = Util.increase(car.z, dt * car.speed, trackLength);
+        car.percent = Util.percentRemaining(car.z, segmentLength); // useful for interpolation during rendering phase
+        newSegment  = findSegment(car.z);
+        if (oldSegment != newSegment) {
+          index = oldSegment.cars.indexOf(car);
+          oldSegment.cars.splice(index, 1);
+          newSegment.cars.push(car);
+        }
+      }
+    }
 
-                function onTouchEnd(e) {
-                    if (!e.changedTouches || e.changedTouches.length !== 1) return;
-                    const t = e.changedTouches[0];
-                    const dx = t.clientX - touchStartX;
-                    const dy = t.clientY - touchStartY;
-                    const dt = Date.now() - touchStartTime;
+    function updateCarOffset(car, carSegment, playerSegment, playerW) {
 
-                    // Hızlı kaydırma algılama
-                    if (dt < maxSwipeTime) {
-                        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > minSwipeX) {
-                            // yatay kaydırma
-                            if (dx > 0) movePlayer(1);
-                            else movePlayer(-1);
-                        } else if (Math.abs(dy) > minSwipeY && dy < 0) {
-                            // yukarı kaydırma -> zıpla
-                            handleJump();
-                        }
-                    }
+      var i, j, dir, segment, otherCar, otherCarW, lookahead = 20, carW = car.sprite.w * SPRITES.SCALE;
 
-                    e.preventDefault();
-                }
+      // optimization, dont bother steering around other cars when 'out of sight' of the player
+      if ((carSegment.index - playerSegment.index) > drawDistance)
+        return 0;
 
-                // Dinleyicileri renderer'ın canvas'ına ekle (diğer elementlerle çakışmayacak şekilde)
-                renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: true });
-                renderer.domElement.addEventListener('touchend', onTouchEnd, { passive: false });
+      for(i = 1 ; i < lookahead ; i++) {
+        segment = segments[(carSegment.index+i)%segments.length];
 
-            } else {
-                // Masaüstü: fare için butonlar hâlâ kullanılabilir
-                if (leftBtn) leftBtn.addEventListener('click', () => movePlayer(-1));
-                if (rightBtn) rightBtn.addEventListener('click', () => movePlayer(1));
-                if (jumpBtn) jumpBtn.addEventListener('mousedown', handleJump);
-            }
-
-            // Ekrana tıklandığında sol/sağ (Masaüstü için alternatif)
-            window.addEventListener('mousedown', (e) => {
-                if(e.clientX < window.innerWidth / 2) movePlayer(-1);
-                else movePlayer(1);
-            });
+        if ((segment === playerSegment) && (car.speed > speed) && (Util.overlap(playerX, playerW, car.offset, carW, 1.2))) {
+          if (playerX > 0.5)
+            dir = -1;
+          else if (playerX < -0.5)
+            dir = 1;
+          else
+            dir = (car.offset > playerX) ? 1 : -1;
+          return dir * 1/i * (car.speed-speed)/maxSpeed; // the closer the cars (smaller i) and the greated the speed ratio, the larger the offset
         }
 
-        function handleInput(e) {
-            if (e.key === 'ArrowLeft' || e.key === 'a') movePlayer(-1);
-            if (e.key === 'ArrowRight' || e.key === 'd') movePlayer(1);
-            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') handleJump();
+        for(j = 0 ; j < segment.cars.length ; j++) {
+          otherCar  = segment.cars[j];
+          otherCarW = otherCar.sprite.w * SPRITES.SCALE;
+          if ((car.speed > otherCar.speed) && Util.overlap(car.offset, carW, otherCar.offset, otherCarW, 1.2)) {
+            if (otherCar.offset > 0.5)
+              dir = -1;
+            else if (otherCar.offset < -0.5)
+              dir = 1;
+            else
+              dir = (car.offset > otherCar.offset) ? 1 : -1;
+            return dir * 1/i * (car.speed-otherCar.speed)/maxSpeed;
+          }
+        }
+      }
+
+      // if no cars ahead, but I have somehow ended up off road, then steer back on
+      if (car.offset < -0.9)
+        return 0.1;
+      else if (car.offset > 0.9)
+        return -0.1;
+      else
+        return 0;
+    }
+
+    //-------------------------------------------------------------------------
+
+    function updateHud(key, value) { // accessing DOM can be slow, so only do it if value has changed
+      if (hud[key].value !== value) {
+        hud[key].value = value;
+        Dom.set(hud[key].dom, value);
+      }
+    }
+
+    function formatTime(dt) {
+      var minutes = Math.floor(dt/60);
+      var seconds = Math.floor(dt - (minutes * 60));
+      var tenths  = Math.floor(10 * (dt - Math.floor(dt)));
+      if (minutes > 0)
+        return minutes + "." + (seconds < 10 ? "0" : "") + seconds + "." + tenths;
+      else
+        return seconds + "." + tenths;
+    }
+
+    //=========================================================================
+    // RENDER THE GAME WORLD
+    //=========================================================================
+
+    function render() {
+
+      var baseSegment   = findSegment(position);
+      var basePercent   = Util.percentRemaining(position, segmentLength);
+      var playerSegment = findSegment(position+playerZ);
+      var playerPercent = Util.percentRemaining(position+playerZ, segmentLength);
+      var playerY       = Util.interpolate(playerSegment.p1.world.y, playerSegment.p2.world.y, playerPercent);
+      var maxy          = height;
+
+      var x  = 0;
+      var dx = - (baseSegment.curve * basePercent);
+
+      ctx.clearRect(0, 0, width, height);
+
+      Render.background(ctx, background, width, height, BACKGROUND.SKY,   skyOffset,  resolution * skySpeed  * playerY);
+      Render.background(ctx, background, width, height, BACKGROUND.HILLS, hillOffset, resolution * hillSpeed * playerY);
+      Render.background(ctx, background, width, height, BACKGROUND.TREES, treeOffset, resolution * treeSpeed * playerY);
+
+      var n, i, segment, car, sprite, spriteScale, spriteX, spriteY;
+
+      for(n = 0 ; n < drawDistance ; n++) {
+
+        segment        = segments[(baseSegment.index + n) % segments.length];
+        segment.looped = segment.index < baseSegment.index;
+        segment.fog    = Util.exponentialFog(n/drawDistance, fogDensity);
+        segment.clip   = maxy;
+
+        Util.project(segment.p1, (playerX * roadWidth) - x,      playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth);
+        Util.project(segment.p2, (playerX * roadWidth) - x - dx, playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth);
+
+        x  = x + dx;
+        dx = dx + segment.curve;
+
+        if ((segment.p1.camera.z <= cameraDepth)         || // behind us
+            (segment.p2.screen.y >= segment.p1.screen.y) || // back face cull
+            (segment.p2.screen.y >= maxy))                  // clip by (already rendered) hill
+          continue;
+
+        Render.segment(ctx, width, lanes,
+                       segment.p1.screen.x,
+                       segment.p1.screen.y,
+                       segment.p1.screen.w,
+                       segment.p2.screen.x,
+                       segment.p2.screen.y,
+                       segment.p2.screen.w,
+                       segment.fog,
+                       segment.color);
+
+        maxy = segment.p1.screen.y;
+      }
+
+      for(n = (drawDistance-1) ; n > 0 ; n--) {
+        segment = segments[(baseSegment.index + n) % segments.length];
+
+        for(i = 0 ; i < segment.cars.length ; i++) {
+          car         = segment.cars[i];
+          sprite      = car.sprite;
+          spriteScale = Util.interpolate(segment.p1.screen.scale, segment.p2.screen.scale, car.percent);
+          spriteX     = Util.interpolate(segment.p1.screen.x,     segment.p2.screen.x,     car.percent) + (spriteScale * car.offset * roadWidth * width/2);
+          spriteY     = Util.interpolate(segment.p1.screen.y,     segment.p2.screen.y,     car.percent);
+          Render.sprite(ctx, width, height, resolution, roadWidth, sprites, car.sprite, spriteScale, spriteX, spriteY, -0.5, -1, segment.clip);
         }
 
-        function movePlayer(direction) {
-            if (!gameActive) return;
-            lane += direction;
-            // Sınırları koru
-            if (lane < -1) lane = -1;
-            if (lane > 1) lane = 1;
+        for(i = 0 ; i < segment.sprites.length ; i++) {
+          sprite      = segment.sprites[i];
+          spriteScale = segment.p1.screen.scale;
+          spriteX     = segment.p1.screen.x + (spriteScale * sprite.offset * roadWidth * width/2);
+          spriteY     = segment.p1.screen.y;
+          Render.sprite(ctx, width, height, resolution, roadWidth, sprites, sprite.source, spriteScale, spriteX, spriteY, (sprite.offset < 0 ? -1 : 0), -1, segment.clip);
         }
 
-        function handleJump() {
-            if (!gameActive) return;
-            if (!isJumping) {
-                isJumping = true;
-                velY = jumpStrength;
-            }
+        if (segment == playerSegment) {
+          Render.player(ctx, width, height, resolution, roadWidth, sprites, speed/maxSpeed,
+                        cameraDepth/playerZ,
+                        width/2,
+                        (height/2) - (cameraDepth/playerZ * Util.interpolate(playerSegment.p1.camera.y, playerSegment.p2.camera.y, playerPercent) * height/2),
+                        speed * (keyLeft ? -1 : keyRight ? 1 : 0),
+                        playerSegment.p2.world.y - playerSegment.p1.world.y);
         }
+      }
+    }
 
-        function createObstacle() {
-            // Rastgele bir engel oluştur (daha kısa, zıplama için uygun)
-            const geometry = new THREE.BoxGeometry(1.5, 1.2, 1); // Düşük engel
-            const loader = new THREE.TextureLoader();
-            const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' rx='30' ry='30' fill='%23ff69b4'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-size='96' fill='white'>🌸</text></svg>`;
-            const url = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-            const material = new THREE.MeshPhongMaterial({ map: loader.load(url), transparent: true });
-            const obstacle = new THREE.Mesh(geometry, material);
-            
-            // Rastgele şerit seç (-1, 0, 1)
-            const randomLane = Math.floor(Math.random() * 3) - 1; 
-            
-            obstacle.position.x = randomLane * laneWidth;
-            obstacle.position.y = 0.6; // merkez y (yükseklik 1.2 olduğundan taban yaklaşık 0)
-            obstacle.position.z = -50; // Uzaktan doğsun
-            obstacle.castShadow = true;
-            
-            scene.add(obstacle);
-            obstacles.push(obstacle);
+    function findSegment(z) {
+      return segments[Math.floor(z/segmentLength) % segments.length]; 
+    }
+
+    //=========================================================================
+    // BUILD ROAD GEOMETRY
+    //=========================================================================
+
+    function lastY() { return (segments.length == 0) ? 0 : segments[segments.length-1].p2.world.y; }
+
+    function addSegment(curve, y) {
+      var n = segments.length;
+      segments.push({
+          index: n,
+             p1: { world: { y: lastY(), z:  n   *segmentLength }, camera: {}, screen: {} },
+             p2: { world: { y: y,       z: (n+1)*segmentLength }, camera: {}, screen: {} },
+          curve: curve,
+        sprites: [],
+           cars: [],
+          color: Math.floor(n/rumbleLength)%2 ? COLORS.DARK : COLORS.LIGHT
+      });
+    }
+
+    function addSprite(n, sprite, offset) {
+      segments[n].sprites.push({ source: sprite, offset: offset });
+    }
+
+    function addRoad(enter, hold, leave, curve, y) {
+      var startY   = lastY();
+      var endY     = startY + (Util.toInt(y, 0) * segmentLength);
+      var n, total = enter + hold + leave;
+      for(n = 0 ; n < enter ; n++)
+        addSegment(Util.easeIn(0, curve, n/enter), Util.easeInOut(startY, endY, n/total));
+      for(n = 0 ; n < hold  ; n++)
+        addSegment(curve, Util.easeInOut(startY, endY, (enter+n)/total));
+      for(n = 0 ; n < leave ; n++)
+        addSegment(Util.easeInOut(curve, 0, n/leave), Util.easeInOut(startY, endY, (enter+hold+n)/total));
+    }
+
+    var ROAD = {
+      LENGTH: { NONE: 0, SHORT:  25, MEDIUM:   50, LONG:  100 },
+      HILL:   { NONE: 0, LOW:    20, MEDIUM:   40, HIGH:   60 },
+      CURVE:  { NONE: 0, EASY:    2, MEDIUM:    4, HARD:    6 }
+    };
+
+    function addStraight(num) {
+      num = num || ROAD.LENGTH.MEDIUM;
+      addRoad(num, num, num, 0, 0);
+    }
+
+    function addHill(num, height) {
+      num    = num    || ROAD.LENGTH.MEDIUM;
+      height = height || ROAD.HILL.MEDIUM;
+      addRoad(num, num, num, 0, height);
+    }
+
+    function addCurve(num, curve, height) {
+      num    = num    || ROAD.LENGTH.MEDIUM;
+      curve  = curve  || ROAD.CURVE.MEDIUM;
+      height = height || ROAD.HILL.NONE;
+      addRoad(num, num, num, curve, height);
+    }
+        
+    function addLowRollingHills(num, height) {
+      num    = num    || ROAD.LENGTH.SHORT;
+      height = height || ROAD.HILL.LOW;
+      addRoad(num, num, num,  0,                height/2);
+      addRoad(num, num, num,  0,               -height);
+      addRoad(num, num, num,  ROAD.CURVE.EASY,  height);
+      addRoad(num, num, num,  0,                0);
+      addRoad(num, num, num, -ROAD.CURVE.EASY,  height/2);
+      addRoad(num, num, num,  0,                0);
+    }
+
+    function addSCurves() {
+      addRoad(ROAD.LENGTH.MEDIUM, ROAD.LENGTH.MEDIUM, ROAD.LENGTH.MEDIUM,  -ROAD.CURVE.EASY,    ROAD.HILL.NONE);
+      addRoad(ROAD.LENGTH.MEDIUM, ROAD.LENGTH.MEDIUM, ROAD.LENGTH.MEDIUM,   ROAD.CURVE.MEDIUM,  ROAD.HILL.MEDIUM);
+      addRoad(ROAD.LENGTH.MEDIUM, ROAD.LENGTH.MEDIUM, ROAD.LENGTH.MEDIUM,   ROAD.CURVE.EASY,   -ROAD.HILL.LOW);
+      addRoad(ROAD.LENGTH.MEDIUM, ROAD.LENGTH.MEDIUM, ROAD.LENGTH.MEDIUM,  -ROAD.CURVE.EASY,    ROAD.HILL.MEDIUM);
+      addRoad(ROAD.LENGTH.MEDIUM, ROAD.LENGTH.MEDIUM, ROAD.LENGTH.MEDIUM,  -ROAD.CURVE.MEDIUM, -ROAD.HILL.MEDIUM);
+    }
+
+    function addBumps() {
+      addRoad(10, 10, 10, 0,  5);
+      addRoad(10, 10, 10, 0, -2);
+      addRoad(10, 10, 10, 0, -5);
+      addRoad(10, 10, 10, 0,  8);
+      addRoad(10, 10, 10, 0,  5);
+      addRoad(10, 10, 10, 0, -7);
+      addRoad(10, 10, 10, 0,  5);
+      addRoad(10, 10, 10, 0, -2);
+    }
+
+    function addDownhillToEnd(num) {
+      num = num || 200;
+      addRoad(num, num, num, -ROAD.CURVE.EASY, -lastY()/segmentLength);
+    }
+
+    function resetRoad() {
+      segments = [];
+
+      addStraight(ROAD.LENGTH.SHORT);
+      addLowRollingHills();
+      addSCurves();
+      addCurve(ROAD.LENGTH.MEDIUM, ROAD.CURVE.MEDIUM, ROAD.HILL.LOW);
+      addBumps();
+      addLowRollingHills();
+      addCurve(ROAD.LENGTH.LONG*2, ROAD.CURVE.MEDIUM, ROAD.HILL.MEDIUM);
+      addStraight();
+      addHill(ROAD.LENGTH.MEDIUM, ROAD.HILL.HIGH);
+      addSCurves();
+      addCurve(ROAD.LENGTH.LONG, -ROAD.CURVE.MEDIUM, ROAD.HILL.NONE);
+      addHill(ROAD.LENGTH.LONG, ROAD.HILL.HIGH);
+      addCurve(ROAD.LENGTH.LONG, ROAD.CURVE.MEDIUM, -ROAD.HILL.LOW);
+      addBumps();
+      addHill(ROAD.LENGTH.LONG, -ROAD.HILL.MEDIUM);
+      addStraight();
+      addSCurves();
+      addDownhillToEnd();
+
+      resetSprites();
+      resetCars();
+
+      segments[findSegment(playerZ).index + 2].color = COLORS.START;
+      segments[findSegment(playerZ).index + 3].color = COLORS.START;
+      for(var n = 0 ; n < rumbleLength ; n++)
+        segments[segments.length-1-n].color = COLORS.FINISH;
+
+      trackLength = segments.length * segmentLength;
+    }
+
+    function resetSprites() {
+      var n, i;
+
+      addSprite(20,  SPRITES.BILLBOARD07, -1);
+      addSprite(40,  SPRITES.BILLBOARD06, -1);
+      addSprite(60,  SPRITES.BILLBOARD08, -1);
+      addSprite(80,  SPRITES.BILLBOARD09, -1);
+      addSprite(100, SPRITES.BILLBOARD01, -1);
+      addSprite(120, SPRITES.BILLBOARD02, -1);
+      addSprite(140, SPRITES.BILLBOARD03, -1);
+      addSprite(160, SPRITES.BILLBOARD04, -1);
+      addSprite(180, SPRITES.BILLBOARD05, -1);
+
+      addSprite(240,                  SPRITES.BILLBOARD07, -1.2);
+      addSprite(240,                  SPRITES.BILLBOARD06,  1.2);
+      addSprite(segments.length - 25, SPRITES.BILLBOARD07, -1.2);
+      addSprite(segments.length - 25, SPRITES.BILLBOARD06,  1.2);
+
+      for(n = 10 ; n < 200 ; n += 4 + Math.floor(n/100)) {
+        addSprite(n, SPRITES.PALM_TREE, 0.5 + Math.random()*0.5);
+        addSprite(n, SPRITES.PALM_TREE,   1 + Math.random()*2);
+      }
+
+      for(n = 250 ; n < 1000 ; n += 5) {
+        addSprite(n,     SPRITES.COLUMN, 1.1);
+        addSprite(n + Util.randomInt(0,5), SPRITES.TREE1, -1 - (Math.random() * 2));
+        addSprite(n + Util.randomInt(0,5), SPRITES.TREE2, -1 - (Math.random() * 2));
+      }
+
+      for(n = 200 ; n < segments.length ; n += 3) {
+        addSprite(n, Util.randomChoice(SPRITES.PLANTS), Util.randomChoice([1,-1]) * (2 + Math.random() * 5));
+      }
+
+      var side, sprite, offset;
+      for(n = 1000 ; n < (segments.length-50) ; n += 100) {
+        side      = Util.randomChoice([1, -1]);
+        addSprite(n + Util.randomInt(0, 50), Util.randomChoice(SPRITES.BILLBOARDS), -side);
+        for(i = 0 ; i < 20 ; i++) {
+          sprite = Util.randomChoice(SPRITES.PLANTS);
+          offset = side * (1.5 + Math.random());
+          addSprite(n + Util.randomInt(0, 50), sprite, offset);
         }
+          
+      }
 
-        function createCoin() {
-            const geometry = new THREE.SphereGeometry(0.28, 16, 16);
-            const material = new THREE.MeshPhongMaterial({ color: 0xffd700, emissive: 0x553300 });
-            const coin = new THREE.Mesh(geometry, material);
+    }
 
-            const randomLane = Math.floor(Math.random() * 3) - 1;
-            coin.position.x = randomLane * laneWidth;
-            coin.position.y = 1.0; // biraz daha alçakta, ulaşılması daha kolay
-            coin.position.z = -50;
-            coin.castShadow = true;
+    function resetCars() {
+      cars = [];
+      var n, car, segment, offset, z, sprite, speed;
+      for (var n = 0 ; n < totalCars ; n++) {
+        offset = Math.random() * Util.randomChoice([-0.8, 0.8]);
+        z      = Math.floor(Math.random() * segments.length) * segmentLength;
+        sprite = Util.randomChoice(SPRITES.CARS);
+        speed  = maxSpeed/4 + Math.random() * maxSpeed/(sprite == SPRITES.SEMI ? 4 : 2);
+        car = { offset: offset, z: z, sprite: sprite, speed: speed };
+        segment = findSegment(car.z);
+        segment.cars.push(car);
+        cars.push(car);
+      }
+    }
 
-            // Kullanıcı kendi resmini koyarsa assets/coin.png yüklenebilir
-            const loader = new THREE.TextureLoader();
-            loader.load('assets/coin.png', (tex) => {
-                material.map = tex;
-                material.needsUpdate = true;
-            }, undefined, () => { /* yoksa renkli materyal kalır */ });
+    //=========================================================================
+    // THE GAME LOOP
+    //=========================================================================
 
-            scene.add(coin);
-            coins.push(coin);
-        }
-
-        function createSpriteRunner(parent) {
-            // Placeholder runner as an SVG texture (you can replace with assets/runner.png)
-            const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' rx='30' ry='30' fill='%23ff2e63'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-size='96' fill='white'>🏃‍♀️</text></svg>`;
-            const url = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-            const loader = new THREE.TextureLoader();
-            loader.load(url, (tex) => {
-                const material = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, alphaTest: 0.01, depthWrite: false });
-                const geo = new THREE.PlaneGeometry(0.9, 1.1);
-                runnerMesh = new THREE.Mesh(geo, material);
-                // Plane is centered; raise it so its bottom sits at group's origin (ground)
-                runnerMesh.position.y = 0.5;
-                runnerMesh.castShadow = true;
-                parent.add(runnerMesh);
-            }, undefined, () => {
-                // fallback: simple colored box
-                const mat = new THREE.MeshPhongMaterial({ color: 0xff2e63, side: THREE.DoubleSide });
-                const box = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1, 0.4), mat);
-                box.position.y = 0.5;
-                parent.add(box);
-                runnerMesh = box;
-            });
-        }
-
-        function createParticles() {
-            // Hız hissi veren yıldızlar/tozlar
-            const geometry = new THREE.BufferGeometry();
-            const vertices = [];
-            for(let i=0; i<5; i++) {
-                const x = (Math.random() - 0.5) * 40;
-                const y = (Math.random()) * 10;
-                const z = -60;
-                vertices.push(x, y, z);
-            }
-            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-            const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.2 });
-            const stars = new THREE.Points(geometry, material);
-            scene.add(stars);
-            particles.push(stars);
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-
-            if (!gameActive) return;
-
-            // Oyuncu Hareketi (Yumuşak Geçiş - Lerp) — hızlandırıldı
-            player.position.x += (lane * laneWidth - player.position.x) * 0.25;
-
-            // Kamera sabit kalacak — hareket etmeyecek
-            camera.position.x = 0;
-            camera.lookAt(0, 0, -5);
-
-            // Zıplama fiziği
-            velY += gravity;
-            player.position.y += velY;
-            if (player.position.y <= groundY) {
-                player.position.y = groundY;
-                velY = 0;
-                isJumping = false;
-            }
-
-            // Animasyon: ilerleyen mixer (3D model) ve sprite koşu animasyonu
-            const delta = clock.getDelta();
-            if (mixer) mixer.update(delta);
-
-            if (!isJumping) {
-                // ground run animation
-                if (runnerMesh) {
-                    // Sprite: hafif dönüş ve zıplama bounce efekti
-                    runnerMesh.rotation.y = Math.sin(Date.now() * 0.01) * 0.16;
-                    const bounce = 1 + Math.sin(Date.now() * 0.01) * 0.02;
-                    runnerMesh.scale.set(bounce, bounce, bounce);
-                } else {
-                    // 3D model: dönmesini istemiyoruz, sadece çok hafif bob uygula
-                    if (characterGroup) {
-                        const bob = 1 + Math.sin(Date.now() * 0.005) * 0.01;
-                        characterGroup.scale.set(bob, bob, bob);
-                    }
-                }
-            } else {
-                if (runnerMesh) runnerMesh.scale.set(1, 0.86, 1);
-                else if (characterGroup) characterGroup.scale.set(1, 0.95, 1);
-            }
-
-            // Engel Yönetimi
-            if (Math.random() < 0.03) createObstacle(); // Engel doğma sıklığı
-            if (Math.random() < 0.015) createCoin(); // Coin doğurma (daha nadir)
-            if (Math.random() < 0.2) createParticles(); // Yıldız efekti
-
-            // Engelleri Hareket Ettir
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                let obj = obstacles[i];
-                obj.position.z += speed;
-
-                // Çarpışma Kontrolü (Bounding-box tabanlı)
-                // Eğer Z pozisyonu oyuncuya çok yakınsa VE X şeridi aynıysa
-                if (obj.position.z > -1 && obj.position.z < 1) {
-                    if (Math.abs(obj.position.x - player.position.x) < 1) {
-                        // Hesapla: engelin üst noktası ve oyuncunun tabanı
-                        const obBox = new THREE.Box3().setFromObject(obj);
-                        const obstacleTopY = obBox.max.y;
-                        const playerBottomY = characterGroup.position.y + playerModelMinY;
-
-                        // Eğer oyuncunun tabanı engelin üstünden daha düşükse çarpışma
-                        if (playerBottomY <= obstacleTopY - 0.05) {
-                            gameOver();
-                        } else {
-                            // Engel üzerinden atlandı: küçük bonus (engeli silmeyiz)
-                            score += 2;
-                            updateHUD();
-                        }
-                    }
-                }
-
-                // Ekrandan çıkınca sil (Performans için)
-                if (obj.position.z > 5) {
-                    scene.remove(obj);
-                    obstacles.splice(i, 1);
-                    score += 10; // Puan artır
-                    updateHUD();
-                    
-                    // Oyun gittikçe hızlansın
-                    speed += 0.0005;
-                }
-            }
-
-            // Coinleri hareket ettir ve toplama kontrolü
-            for (let i = coins.length - 1; i >= 0; i--) {
-                let c = coins[i];
-                c.position.z += speed;
-
-                // Toplama kontrolü: yakınlık ve oyuncunun yüksekliği
-                if (c.position.z > -1 && c.position.z < 1 && Math.abs(c.position.x - player.position.x) < 1) {
-                    if (Math.abs(player.position.y - c.position.y) < 0.9) {
-                        // Toplandı
-                        scene.remove(c);
-                        coins.splice(i, 1);
-                        coinCount += 1;
-                        updateHUD();
-                        continue;
-                    }
-                }
-
-                // Ekrandan çıkınca sil
-                if (c.position.z > 5) {
-                    scene.remove(c);
-                    coins.splice(i, 1);
-                }
-            }
-
-            // Parçacık Hareketi
-            for (let i = particles.length - 1; i >= 0; i--) {
-                let p = particles[i];
-                p.position.z += speed * 2; // Yıldızlar daha hızlı aksın
-                if (p.position.z > 5) {
-                    scene.remove(p);
-                    particles.splice(i, 1);
-                }
-            }
-
-            renderer.render(scene, camera);
-        }
-
-        function gameOver() {
-            gameActive = false;
-            document.getElementById('game-over').style.display = 'block';
-        }
-
-        // Pencere boyutu değişirse
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+    Game.run({
+      canvas: canvas, render: render, update: update, stats: stats, step: step,
+      images: ["background", "sprites"],
+      keys: [
+        { keys: [KEY.LEFT,  KEY.A], mode: 'down', action: function() { keyLeft   = true;  } },
+        { keys: [KEY.RIGHT, KEY.D], mode: 'down', action: function() { keyRight  = true;  } },
+        { keys: [KEY.UP,    KEY.W], mode: 'down', action: function() { keyFaster = true;  } },
+        { keys: [KEY.DOWN,  KEY.S], mode: 'down', action: function() { keySlower = true;  } },
+        { keys: [KEY.LEFT,  KEY.A], mode: 'up',   action: function() { keyLeft   = false; } },
+        { keys: [KEY.RIGHT, KEY.D], mode: 'up',   action: function() { keyRight  = false; } },
+        { keys: [KEY.UP,    KEY.W], mode: 'up',   action: function() { keyFaster = false; } },
+        { keys: [KEY.DOWN,  KEY.S], mode: 'up',   action: function() { keySlower = false; } }
+      ],
+      ready: function(images) {
+        background = images[0];
+        sprites    = images[1];
+        setupMobileControls();
+        // Set canvas to match window size
+        var w = window.innerWidth;
+        var h = window.innerHeight;
+        reset({ width: w, height: h });
+        Dom.storage.fast_lap_time = Dom.storage.fast_lap_time || 180;
+        updateHud('fast_lap_time', formatTime(Util.toFloat(Dom.storage.fast_lap_time)));
+        // Handle window resize
+        window.addEventListener('resize', function() {
+          reset({ width: window.innerWidth, height: window.innerHeight });
         });
+      }
+    });
 
-        function updateHUD() {
-            document.getElementById('score-board').innerText = "MESAFE: " + Math.floor(score) + "m  COIN: " + coinCount;
-        }
+    function reset(options) {
+      options       = options || {};
+      canvas.width  = width  = Util.toInt(options.width,          width);
+      canvas.height = height = Util.toInt(options.height,         height);
+      lanes                  = Util.toInt(options.lanes,          lanes);
+      roadWidth              = Util.toInt(options.roadWidth,      roadWidth);
+      cameraHeight           = Util.toInt(options.cameraHeight,   cameraHeight);
+      drawDistance           = Util.toInt(options.drawDistance,   drawDistance);
+      fogDensity             = Util.toInt(options.fogDensity,     fogDensity);
+      fieldOfView            = Util.toInt(options.fieldOfView,    fieldOfView);
+      segmentLength          = Util.toInt(options.segmentLength,  segmentLength);
+      rumbleLength           = Util.toInt(options.rumbleLength,   rumbleLength);
+      cameraDepth            = 1 / Math.tan((fieldOfView/2) * Math.PI/180);
+      playerZ                = (cameraHeight * cameraDepth);
+      resolution             = height/480;
+      refreshTweakUI();
 
-    </script>
-</body>
+      if ((segments.length==0) || (options.segmentLength) || (options.rumbleLength))
+        resetRoad(); // only rebuild road when necessary
+    }
+
+    //=========================================================================
+    // TWEAK UI HANDLERS
+    //=========================================================================
+
+    Dom.on('resolution', 'change', function(ev) {
+      var w, h, ratio;
+      switch(ev.target.options[ev.target.selectedIndex].value) {
+        case 'fine':   w = 1280; h = 960;  ratio=w/width; break;
+        case 'high':   w = 1024; h = 768;  ratio=w/width; break;
+        case 'medium': w = 640;  h = 480;  ratio=w/width; break;
+        case 'low':    w = 480;  h = 360;  ratio=w/width; break;
+      }
+      reset({ width: w, height: h })
+      Dom.blur(ev);
+    });
+
+    Dom.on('lanes',          'change', function(ev) { Dom.blur(ev); reset({ lanes:         ev.target.options[ev.target.selectedIndex].value }); });
+    Dom.on('roadWidth',      'change', function(ev) { Dom.blur(ev); reset({ roadWidth:     Util.limit(Util.toInt(ev.target.value), Util.toInt(ev.target.getAttribute('min')), Util.toInt(ev.target.getAttribute('max'))) }); });
+    Dom.on('cameraHeight',   'change', function(ev) { Dom.blur(ev); reset({ cameraHeight:  Util.limit(Util.toInt(ev.target.value), Util.toInt(ev.target.getAttribute('min')), Util.toInt(ev.target.getAttribute('max'))) }); });
+    Dom.on('drawDistance',   'change', function(ev) { Dom.blur(ev); reset({ drawDistance:  Util.limit(Util.toInt(ev.target.value), Util.toInt(ev.target.getAttribute('min')), Util.toInt(ev.target.getAttribute('max'))) }); });
+    Dom.on('fieldOfView',    'change', function(ev) { Dom.blur(ev); reset({ fieldOfView:   Util.limit(Util.toInt(ev.target.value), Util.toInt(ev.target.getAttribute('min')), Util.toInt(ev.target.getAttribute('max'))) }); });
+    Dom.on('fogDensity',     'change', function(ev) { Dom.blur(ev); reset({ fogDensity:    Util.limit(Util.toInt(ev.target.value), Util.toInt(ev.target.getAttribute('min')), Util.toInt(ev.target.getAttribute('max'))) }); });
+
+    function refreshTweakUI() {
+      Dom.get('lanes').selectedIndex = lanes-1;
+      Dom.get('currentRoadWidth').innerHTML      = Dom.get('roadWidth').value      = roadWidth;
+      Dom.get('currentCameraHeight').innerHTML   = Dom.get('cameraHeight').value   = cameraHeight;
+      Dom.get('currentDrawDistance').innerHTML   = Dom.get('drawDistance').value   = drawDistance;
+      Dom.get('currentFieldOfView').innerHTML    = Dom.get('fieldOfView').value    = fieldOfView;
+      Dom.get('currentFogDensity').innerHTML     = Dom.get('fogDensity').value     = fogDensity;
+    }
+
+    //=========================================================================
+
+  </script>
+
+</body> 
 </html>

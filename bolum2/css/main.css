@@ -111,6 +111,8 @@ body
    font-family: monospace;
    font-size: 12px;
    color: #fff;
+   /* match sky color to avoid white edges when the game area is shifted */
+   background-color: #4ec0ca;
 }
 
 #gamecontainer
@@ -372,3 +374,29 @@ Screen - Game
    text-decoration: none;
    color: #fff;
 }
+
+/* Focus lower-left (applies a slight zoom and shift towards bottom-left) */
+#gamescreen.focus-lower-left {
+   transform-origin: left bottom;
+   /* reversed: move game area to the right so left-side content is visible */
+   transform: translate(12%, 6%) scale(1.06);
+}
+
+/* Mobile adjustments reversed: shift right to reveal left content on small screens */
+@media (max-width: 768px) {
+   #gamescreen.focus-lower-left {
+      transform: translate(22%, 12%) scale(1.10);
+   }
+   /* Lower CPU work on small devices when low-power class is set */
+   body.low-power #sky,
+   body.low-power #land,
+   body.low-power .pipe {
+      -webkit-animation-play-state: paused;
+      animation-play-state: paused;
+   }
+   /* Ensure important HUD elements stay visible when shifted */
+   #bigscore { left: 6px; top: 10px; }
+   #splash { left: 8px; top: 60px; }
+   #player { left: 18px; top: 220px; }
+}
+
