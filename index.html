@@ -8,7 +8,8 @@
         body {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            /* Romantik, derin bir arkaplan */
+            background: radial-gradient(circle at center, #2b1055, #7597de);
             color: white;
             font-family: 'Segoe UI', sans-serif;
             display: flex;
@@ -16,92 +17,143 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            text-align: center;
+            overflow-x: hidden;
+        }
+
+        /* Arkaplana hareketli baloncuklar ekleyelim (Opsiyonel süs) */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url('https://www.transparenttextures.com/patterns/stardust.png');
+            opacity: 0.3;
+            pointer-events: none;
         }
 
         h1 {
-            color: #ffffff;
-            font-size: 2.5rem;
+            font-size: 3rem;
             margin-bottom: 10px;
-            text-shadow: 0 0 10px rgba(255, 46, 99, 0.5);
+            text-shadow: 0 0 20px #ff0055, 0 0 40px #ff0055;
+            z-index: 10;
         }
 
         p.subtitle {
-            color: #eaeaea;
-            font-size: 1.1rem;
-            margin-bottom: 40px;
+            font-size: 1.2rem;
+            margin-bottom: 50px;
+            color: #ffd1dc;
             font-style: italic;
+            z-index: 10;
         }
 
-        .menu-container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            width: 80%;
-            max-width: 400px;
+        /* IZGARA SİSTEMİ (3-6-9 Yapısı) */
+        .grid-container {
+            display: grid;
+            /* Masaüstünde 3 sütun, sığmazsa otomatik ayarla */
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 25px;
+            width: 90%;
+            max-width: 1000px;
+            padding: 20px;
+            z-index: 10;
         }
 
         .game-card {
-            background: lab(64.45% 50.44 -22.82);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 15px;
+            /* Kare Görünüm */
+            aspect-ratio: 1 / 1; 
+            background: rgba(255, 255, 255, 0.1); /* Yarı saydam beyaz */
+            backdrop-filter: blur(12px); /* Buzlu cam efekti */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
             text-decoration: none;
             color: white;
-            border: 2px solid transparent;
-            transition: transform 0.2s, border-color 0.2s;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 15px;
+            justify-content: center;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
         }
 
+        /* Hover (Üzerine gelince) Efektleri */
         .game-card:hover {
-            transform: scale(1.03);
-            border-color: #ff2e63;
-            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-10px) scale(1.05);
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #ff0055;
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.4);
         }
 
-        .icon { font-size: 2rem; }
+        .icon {
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+            transition: transform 0.3s;
+        }
         
-        .info { text-align: left; }
-        .title { display: block; font-weight: bold; font-size: 1.2rem; }
-        .desc { display: block; font-size: 0.8rem; color: #ccc; margin-top: 5px; }
+        .game-card:hover .icon {
+            transform: scale(1.2) rotate(10deg);
+        }
+
+        .title {
+            font-weight: bold;
+            font-size: 1.4rem;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+
+        .desc {
+            font-size: 0.9rem;
+            color: #ddd;
+            padding: 0 10px;
+        }
+
+        /* MOBİL UYUMLULUK */
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr); /* Tablette 2'li */
+            }
+        }
+        @media (max-width: 480px) {
+            .grid-container {
+                grid-template-columns: repeat(1, 1fr); /* Telefonda 1'li */
+            }
+        }
 
     </style>
 </head>
 <body>
 
-    <h1>❤️ Maceramız ❤️</h1>
-    <p class="subtitle">Bölümleri sırayla oyna...</p>
+    <h1>Miyaba ❤️</h1>
+    <p class="subtitle">Senin için hazırladığım küçük dünyam...</p>
 
-    <div class="menu-container">
+    <div class="grid-container">
         <a href="bolum1/index.html" class="game-card">
-            
-            <div class="info">
-                <span class="title">Bölüm 1: Tanışma</span>
-                <span class="desc">Parçalar birleşti ve biz olduk.</span>
-            </div>
+            <div class="icon">🧩</div>
+            <span class="title">Bölüm 1</span>
+            <span class="desc">Tanışma Hikayemiz<br>(2048)</span>
         </a>
-        <a href="bolum2/index.html" class="game-card">    
-            <div class="info">
-                <span class="title">Bölüm 2: Engeller</span>
-                <span class="desc">Birlikte her zorluğu aşarız.</span>
-            </div>
+
+        <a href="bolum2/index.html" class="game-card">
+            <div class="icon">🕊️</div>
+            <span class="title">Bölüm 2</span>
+            <span class="desc">Engelleri Aşmak<br>(Flappy)</span>
         </a>
+
         <a href="bolum3/index.html" class="game-card">
-            <div class="info">
-                <span class="title">Bölüm 3: Sonsuzluk</span>
-                <span class="desc">Seninle yolculuğum hiç bitmesin.</span>
-            </div>
+            <div class="icon">🏎️</div>
+            <span class="title">Bölüm 3</span>
+            <span class="desc">Sonsuzluk<br>(Koşu)</span>
         </a>
 
         <a href="bolum4/index.html" class="game-card">
-            <div class="info">
-                <span class="title">Bölüm 4: Yolculuk</span>
-                <span class="desc">askimm</span>
-            </div>
+            <div class="icon">🏃‍♀️</div>
+            <span class="title">Bölüm 4</span>
+            <span class="desc">Yolculuk<br>(Aşkım)</span>
         </a>
-    </div>
+
+        </div>
 
 </body>
 </html>

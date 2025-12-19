@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Sonsuz Aşk Koşusu</title>
+    <title>CILGIN BABAANNE KOSUDA</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; touch-action: none; /* Mobilde sayfa kaymasını engeller */ }
@@ -49,17 +49,15 @@
     </div>
     
     <div id="loading">
-        FBX DOSYASI YÜKLENİYOR...<br>
+        ÇILGIN BABAANNE KOŞUYA HAZIRLANIYOR<br>
         <span style="font-size:14px; font-weight:normal;">(Biraz sürebilir)</span>
     </div>
 
     <div id="game-over">
-        <h1>ÇARPTIN! 💥</h1>
+        <h1>Hayırrrrrr 💥</h1>
         <p>Puan: <span id="final-score" style="color:#ffeb3b;">0</span></p>
-        <button class="restart-btn" onclick="location.reload()">TEKRAR OYNA ↺</button>
+        <button class="restart-btn" onclick="location.reload()">Tekrar Oyna ↺</button>
     </div>
-
-    <div id="tutorial">Kaydır: ⬆️ Zıpla | ⬅️ Sol | ➡️ Sağ</div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.128.0/build/three.module.js';
@@ -237,9 +235,6 @@
                 playerContainer.position.x += (lane * laneWidth - playerContainer.position.x) * 0.15;
                 playerContainer.position.y = playerY;
 
-                // 2. KAMERA TAKİBİ (ÇÖZÜM BURADA)
-                // Kameranın X pozisyonu, oyuncunun X pozisyonunun yarısı kadar kaysın.
-                // Böylece oyuncu asla ekranın dışına çıkmaz.
                 camera.position.x += (playerContainer.position.x - camera.position.x) * 0.1;
                 // Kamera her zaman hafif önüne baksın
                 camera.lookAt(playerContainer.position.x * 0.5, 1.5, -5);
